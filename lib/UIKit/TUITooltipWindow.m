@@ -65,6 +65,7 @@ static NSTimer *FadeOutTimer = nil;
 		[w setBackgroundColor:[NSColor clearColor]];
 		[w setHasShadow:YES];
 		[w setIgnoresMouseEvents:YES];
+    [w setLevel:CGShieldingWindowLevel()+1];
 		
 		TUITooltipWindowView *v = [[TUITooltipWindowView alloc] initWithFrame:r];
 		[v setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
