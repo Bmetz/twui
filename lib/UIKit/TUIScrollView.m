@@ -97,13 +97,6 @@ enum {
 - (void)dealloc
 {
 	[scrollTimer invalidate];
-	[scrollTimer release];
-	scrollTimer = nil;
-	
-	[_horizontalScrollKnob release];
-	[_verticalScrollKnob release];
-	
-	[super dealloc];
 }
 
 - (id<TUIScrollViewDelegate>)delegate
@@ -260,7 +253,7 @@ enum {
 	_bounce.bouncing = NO;
 	
 	if(!scrollTimer) {
-		scrollTimer = [[NSTimer scheduledTimerWithTimeInterval:1/60. target:self selector:@selector(tick:) userInfo:nil repeats:YES] retain];
+		scrollTimer = [NSTimer scheduledTimerWithTimeInterval:1/60. target:self selector:@selector(tick:) userInfo:nil repeats:YES];
 	}
 }
 
@@ -268,7 +261,6 @@ enum {
 {
 	if(scrollTimer) {
 		[scrollTimer invalidate];
-		[scrollTimer release];
 		scrollTimer = nil;
 	}
 	_scrollViewFlags.animationMode = AnimationModeNone;
@@ -372,29 +364,29 @@ enum {
 	
 	switch(self.verticalScrollIndicatorVisibility){
     case TUIScrollViewIndicatorVisibleNever:
-      vEffectiveVisible = FALSE;
+      vEffectiveVisible = _verticalScrollKnob.flashing;
       break;
     case TUIScrollViewIndicatorVisibleWhenScrolling:
-      vEffectiveVisible = vVisible && _scrollViewFlags.animationMode != AnimationModeNone;
+	  vEffectiveVisible = vVisible && (_scrollViewFlags.animationMode != AnimationModeNone || _verticalScrollKnob.flashing);
       break;
     case TUIScrollViewIndicatorVisibleWhenMouseInside:
-      vEffectiveVisible = vVisible && (_scrollViewFlags.animationMode != AnimationModeNone || _scrollViewFlags.mouseInside || _scrollViewFlags.mouseDownInScrollKnob);
+      vEffectiveVisible = vVisible && (_scrollViewFlags.animationMode != AnimationModeNone || _scrollViewFlags.mouseInside || _scrollViewFlags.mouseDownInScrollKnob || _verticalScrollKnob.flashing);
       break;
     case TUIScrollViewIndicatorVisibleAlways:
     default:
       // don't alter the visibility
       break;
 	}
-	
+		
 	switch(self.horizontalScrollIndicatorVisibility){
     case TUIScrollViewIndicatorVisibleNever:
       hEffectiveVisible = FALSE;
       break;
     case TUIScrollViewIndicatorVisibleWhenScrolling:
-      hEffectiveVisible = vVisible && _scrollViewFlags.animationMode != AnimationModeNone;
+      hEffectiveVisible = vVisible && (_scrollViewFlags.animationMode != AnimationModeNone || _horizontalScrollKnob.flashing);
       break;
     case TUIScrollViewIndicatorVisibleWhenMouseInside:
-      hEffectiveVisible = vVisible && (_scrollViewFlags.animationMode != AnimationModeNone || _scrollViewFlags.mouseInside || _scrollViewFlags.mouseDownInScrollKnob);
+      hEffectiveVisible = vVisible && (_scrollViewFlags.animationMode != AnimationModeNone || _scrollViewFlags.mouseInside || _scrollViewFlags.mouseDownInScrollKnob || _horizontalScrollKnob.flashing);
       break;
     case TUIScrollViewIndicatorVisibleAlways:
     default:
@@ -879,11 +871,16 @@ static float clampBounce(float x) {
 {
 	[_horizontalScrollKnob flash];
 	[_verticalScrollKnob flash];
+	[self _updateScrollKnobsAnimated:YES];
 }
 
 - (BOOL)isDragging
 {
 	return _scrollViewFlags.gestureBegan;
+}
+
+- (BOOL)isDecelerating {
+	return _scrollViewFlags.animationMode == AnimationModeScrollTo;
 }
 
 /*
@@ -990,6 +987,10 @@ static float clampBounce(float x) {
 
 - (void)scrollWheel:(NSEvent *)event
 {
+	if(_contentSize.height <= CGRectGetHeight(self.bounds)) {
+		[super scrollWheel:event];
+	}
+	
 	if(self.scrollEnabled)
 	{
 		int phase = ScrollPhaseNormal;
@@ -1141,6 +1142,8 @@ static float clampBounce(float x) {
     _scrollViewFlags.mouseDownInScrollKnob = TRUE;
     [self _updateScrollKnobsAnimated:TRUE];
   }
+	
+	[super mouseDown:event onSubview:subview];
 }
 
 -(void)mouseUp:(NSEvent *)event fromSubview:(TUIView *)subview {
@@ -1148,6 +1151,8 @@ static float clampBounce(float x) {
     _scrollViewFlags.mouseDownInScrollKnob = FALSE;
     [self _updateScrollKnobsAnimated:TRUE];
   }
+	
+	[super mouseUp:event fromSubview:subview];
 }
 
 -(void)mouseEntered:(NSEvent *)event onSubview:(TUIView *)subview {

@@ -31,31 +31,27 @@
 @synthesize font=_font;
 @synthesize textColor=_textColor;
 @synthesize alignment=_alignment;
+@synthesize lineBreakMode = _lineBreakMode;
 
 - (id)initWithFrame:(CGRect)frame
 {
 	if((self = [super initWithFrame:frame])) {
 		renderer = [[TUITextRenderer alloc] init];
 		[self setTextRenderers:[NSArray arrayWithObjects:renderer, nil]];
+		
+		_lineBreakMode = TUILineBreakModeClip;
+		_alignment = TUITextAlignmentLeft;
 	}
 	return self;
 }
 
-- (void)dealloc
-{
-	[_text release];
-	[_font release];
-	[_textColor release];
-	[renderer release];
-	[super dealloc];
-}
 
 - (NSMenu *)menuForEvent:(NSEvent *)event
 {
 	NSMenu *m = [[NSMenu alloc] initWithTitle:@""];
 	
 	{
-		NSMenuItem *i = [[[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Copy",nil) action:@selector(copyText:) keyEquivalent:@""] autorelease];
+		NSMenuItem *i = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Copy",nil) action:@selector(copyText:) keyEquivalent:@""];
 		[i setKeyEquivalent:@"c"];
 		[i setKeyEquivalentModifierMask:NSCommandKeyMask];
 		[i setTarget:self];
@@ -63,7 +59,7 @@
 		
 	}
 	
-	return [m autorelease];
+	return m;
 }
 - (void)copyText:(id)sender
 {
@@ -109,7 +105,7 @@
 	TUIAttributedString *newAttributedString = [TUIAttributedString stringWithString:_text];
 	if(_font != nil) newAttributedString.font = _font;
 	if(_textColor != nil) newAttributedString.color = _textColor;
-	newAttributedString.alignment = _alignment;
+	[newAttributedString setAlignment:self.alignment lineBreakMode:self.lineBreakMode];
 	self.attributedString = newAttributedString;
 }
 
@@ -127,7 +123,6 @@
 {
 	if(text == _text) return;
 	
-	[_text release];
 	_text = [text copy];
 	
 	self.attributedString = nil;
@@ -137,8 +132,7 @@
 {
 	if(font == _font) return;
 	
-	[_font release];
-	_font = [font retain];
+	_font = font;
 	
 	self.attributedString = nil;
 }
@@ -147,8 +141,7 @@
 {
 	if(textColor == _textColor) return;
 	
-	[_textColor release];
-	_textColor = [textColor retain];
+	_textColor = textColor;
 	
 	self.attributedString = nil;
 }
@@ -158,6 +151,15 @@
 	if(alignment == _alignment) return;
 	
 	_alignment = alignment;
+	
+	self.attributedString = nil;
+}
+
+- (void)setLineBreakMode:(TUILineBreakMode)lineBreakMode
+{
+	if (lineBreakMode == _lineBreakMode) return;
+	
+	_lineBreakMode = lineBreakMode;
 	
 	self.attributedString = nil;
 }

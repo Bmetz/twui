@@ -26,10 +26,11 @@
 
 @interface TUITextView : TUIControl
 {
-	id<TUITextViewDelegate> delegate;
+	id<TUITextViewDelegate> __unsafe_unretained delegate;
 	TUIViewDrawRect drawFrame;
 	
 	NSString *placeholder;
+	TUITextRenderer *placeholderRenderer;
 	
 	TUIFont *font;
 	TUIColor *textColor;
@@ -41,6 +42,7 @@
 	NSArray *lastCheckResults;
 	NSTextCheckingResult *selectedTextCheckingResult;
 	BOOL autocorrectionEnabled;
+	NSMutableDictionary *autocorrectedResults;
 
 	TUIEdgeInsets contentInset;
 
@@ -52,17 +54,21 @@
 	struct {
 		unsigned int delegateTextViewDidChange:1;
 		unsigned int delegateDoCommandBySelector:1;
+		unsigned int delegateWillBecomeFirstResponder:1;
+		unsigned int delegateDidBecomeFirstResponder:1;
+		unsigned int delegateWillResignFirstResponder:1;
+		unsigned int delegateDidResignFirstResponder:1;
 	} _textViewFlags;
 }
 
 - (Class)textEditorClass;
 
-@property (nonatomic, assign) id<TUITextViewDelegate> delegate;
+@property (nonatomic, unsafe_unretained) id<TUITextViewDelegate> delegate;
 
 @property (nonatomic, copy) NSString *text;
 @property (nonatomic, copy) NSString *placeholder;
-@property (nonatomic, retain) TUIFont *font;
-@property (nonatomic, retain) TUIColor *textColor;
+@property (nonatomic, strong) TUIFont *font;
+@property (nonatomic, strong) TUIColor *textColor;
 @property (nonatomic, assign) TUITextAlignment textAlignment;
 @property (nonatomic, assign) TUIEdgeInsets contentInset;
 
@@ -86,6 +92,11 @@
 
 - (void)textViewDidChange:(TUITextView *)textView;
 - (BOOL)textView:(TUITextView *)textView doCommandBySelector:(SEL)commandSelector; // return YES if the implementation consumes the selector, NO if it should be passed up to super
+
+- (void)textViewWillBecomeFirstResponder:(TUITextView *)textView;
+- (void)textViewDidBecomeFirstResponder:(TUITextView *)textView;
+- (void)textViewWillResignFirstResponder:(TUITextView *)textView;
+- (void)textViewDidResignFirstResponder:(TUITextView *)textView;
 
 @end
 

@@ -20,6 +20,13 @@
 #import "TUITooltipWindow.h"
 #import <CoreFoundation/CoreFoundation.h>
 
+@interface TUINSView ()
+- (void)windowDidResignKey:(NSNotification *)notification;
+- (void)windowDidBecomeKey:(NSNotification *)notification;
+- (void)screenProfileOrBackingPropertiesDidChange:(NSNotification *)notification;
+@end
+
+
 @implementation TUINSView
 
 @synthesize rootView;
@@ -34,17 +41,17 @@
 
 - (void)dealloc
 {
-	[rootView release];
-	rootView = nil;
-	[_hoverView release];
-	_hoverView = nil;
-	[_trackingView release];
-	_trackingView = nil;
-	[_trackingArea release];
-	_trackingArea = nil;
-	[_hyperCompletion release];
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidResignKeyNotification object:nil];
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidBecomeKeyNotification object:nil];
 	
-	[super dealloc];
+	[rootView removeFromSuperview];
+    rootView.nsView = nil;
+	
+	rootView = nil;
+	_hoverView = nil;
+	_trackingView = nil;
+	_trackingArea = nil;
+	
 }
 
 - (void)resetCursorRects
@@ -55,6 +62,11 @@
 }
 		 
 - (void)ab_setIsOpaque:(BOOL)o
+{
+	opaque = o;
+}
+
+- (void)tui_setOpaque:(BOOL)o
 {
 	opaque = o;
 }
@@ -75,7 +87,6 @@
 	
 	if(_trackingArea) {
 		[self removeTrackingArea:_trackingArea];
-		[_trackingArea release];
 	}
 	
 	NSRect r = [self frame];
@@ -111,8 +122,6 @@
 	v.autoresizingMask = TUIViewAutoresizingFlexibleSize;
 
 	rootView.nsView = nil;
-	[v retain];
-	[rootView release];
 	rootView = v;
 	rootView.nsView = self;
 	
@@ -125,17 +134,76 @@
 	CALayer *layer = [self layer];
 	[layer setDelegate:self];
 	[layer addSublayer:rootView.layer];
-	if(Screen_Scale != 1.0) {
-		layer.anchorPoint = CGPointMake(0, 0);
-		layer.transform = CATransform3DMakeScale(Screen_Scale, Screen_Scale, Screen_Scale);
+	
+	[self _updateLayerScaleFactor];
+}
+
+- (void)setNextResponder:(NSResponder *)r
+{
+	NSResponder *nextResponder = [self nextResponder];
+	if([nextResponder isKindOfClass:[NSViewController class]]) {
+		// keep view controller in chain
+		[nextResponder setNextResponder:r];
+	} else {
+		[super setNextResponder:r];
+	}
+}
+
+- (void)viewWillMoveToWindow:(NSWindow *)newWindow {
+	if(self.window != nil) {
+		[[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidBecomeKeyNotification object:self.window];
+		[[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidResignKeyNotification object:self.window];
+		[[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidChangeScreenProfileNotification object:self.window];
+	}
+	
+	if(newWindow != nil && rootView.layer.superlayer != [self layer]) {
+		rootView.layer.frame = self.layer.bounds;
+		[[self layer] addSublayer:rootView.layer];
+	}
+	
+	[self.rootView willMoveToWindow:(TUINSWindow *) newWindow];
+	
+	if(newWindow == nil) {
+		[rootView removeFromSuperview];
 	}
 }
 
 - (void)viewDidMoveToWindow
 {
-	if(self.window != nil && rootView.layer.superlayer != [self layer]) {
-		[[self layer] addSublayer:rootView.layer];
+	[self _updateLayerScaleFactor];
+	
+	[self.rootView didMoveToWindow];
+	
+	if(self.window != nil) {
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(windowDidResignKey:) name:NSWindowDidResignKeyNotification object:self.window];
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(windowDidBecomeKey:) name:NSWindowDidBecomeKeyNotification object:self.window];
+		
+		// make sure the window will post NSWindowDidChangeScreenProfileNotification
+		[self.window setDisplaysWhenScreenProfileChanges:YES];
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenProfileOrBackingPropertiesDidChange:) name:NSWindowDidChangeScreenProfileNotification object:self.window];
 	}
+}
+
+- (void)_updateLayerScaleFactor {
+	if([self window] != nil) {
+		CGFloat scale = 1.0f;
+		if([[self window] respondsToSelector:@selector(backingScaleFactor)]) {
+			scale = [[self window] backingScaleFactor];
+		}
+		
+		if([self.layer respondsToSelector:@selector(setContentsScale:)]) {
+			if(fabs(self.layer.contentsScale - scale) > 0.1f) {
+				self.layer.contentsScale = scale;
+			}
+		}
+		
+		[self.rootView _updateLayerScaleFactor];
+	}
+}
+
+- (void)screenProfileOrBackingPropertiesDidChange:(NSNotification *)notification
+{
+	[self _updateLayerScaleFactor];
 }
 
 - (TUIView *)viewForLocalPoint:(NSPoint)p
@@ -158,6 +226,39 @@
 	return [self viewForLocationInWindow:[event locationInWindow]];
 }
 
+- (void)windowDidResignKey:(NSNotification *)notification
+{
+	[TUITooltipWindow endTooltip];
+	
+	if(![self isWindowKey]) {
+		[self.rootView windowDidResignKey];
+	}
+}
+
+- (void)windowDidBecomeKey:(NSNotification *)notification
+{
+	[self.rootView windowDidBecomeKey];
+}
+
+- (BOOL)isWindowKey
+{
+	if([self.window isKeyWindow]) return YES;
+	
+	NSWindow *keyWindow = [NSApp keyWindow];
+	if(keyWindow == nil) return NO;
+	
+	return keyWindow == [self.window attachedSheet];
+}
+
+- (void)viewWillMoveToSuperview:(NSView *)newSuperview
+{
+	[super viewWillMoveToSuperview:newSuperview];
+	
+	if(newSuperview == nil) {
+		[TUITooltipWindow endTooltip];
+	}
+}
+
 - (void)_updateHoverView:(TUIView *)_newHoverView withEvent:(NSEvent *)event
 {
 	if(_hyperFocusView) {
@@ -169,14 +270,15 @@
 	if(_newHoverView != _hoverView) {
 		[_newHoverView mouseEntered:event];
 		[_hoverView mouseExited:event];
-		[_hoverView release];
-		_hoverView = [_newHoverView retain];
+		_hoverView = _newHoverView;
 		
 		if([[self window] isKeyWindow]) {
 			[TUITooltipWindow updateTooltip:_hoverView.toolTip delay:_hoverView.toolTipDelay];
 		} else {
 			[TUITooltipWindow updateTooltip:nil delay:_hoverView.toolTipDelay];
 		}
+	} else {
+		[_hoverView mouseMoved:event];
 	}
 }
 
@@ -221,8 +323,8 @@
 	} else {
 		// normal case
 	normal:
-		[_trackingView release];
-		_trackingView = [[self viewForEvent:event] retain];
+		;
+		_trackingView = [self viewForEvent:event];
 		[_trackingView mouseDown:event];
 	}
 	
@@ -231,9 +333,8 @@
 
 - (void)mouseUp:(NSEvent *)event
 {
-	TUIView *lastTrackingView = [[_trackingView retain] autorelease];
+	TUIView *lastTrackingView = _trackingView;
 
-	[_trackingView release];
 	_trackingView = nil;
 
 	[lastTrackingView mouseUp:event]; // after _trackingView set to nil, will call mouseUp:fromSubview:
@@ -261,8 +362,7 @@
 
 - (void)rightMouseDown:(NSEvent *)event
 {
-	[_trackingView release];
-	_trackingView = [[self viewForEvent:event] retain];
+	_trackingView = [self viewForEvent:event];
 	[_trackingView rightMouseDown:event];
 	[TUITooltipWindow endTooltip];
 	[super rightMouseDown:event]; // we need to send this up the responder chain so that -menuForEvent: will get called for two-finger taps
@@ -270,9 +370,8 @@
 
 - (void)rightMouseUp:(NSEvent *)event
 {
-	TUIView *lastTrackingView = [[_trackingView retain] autorelease];
+	TUIView *lastTrackingView = _trackingView;
 	
-	[_trackingView release];
 	_trackingView = nil;
 	
 	[lastTrackingView rightMouseUp:event]; // after _trackingView set to nil, will call mouseUp:fromSubview:
@@ -318,6 +417,19 @@
 		deliveringEvent = YES;
 		[[self viewForEvent:event] swipeWithEvent:event];
 		deliveringEvent = NO;
+	}
+}
+
+- (void)keyDown:(NSEvent *)event
+{
+	BOOL consumed = NO;
+	// TUIView uses -performKeyAction: in -keyDown: to do its key equivalents. If none of our TUIViews consumed the key down as a key action, we want to give our view controller a chance to handle the key down as a key equivalent.
+	if([[self nextResponder] isKindOfClass:[NSViewController class]]) {
+		consumed = [[self nextResponder] performKeyEquivalent:event];
+	}
+	
+	if(!consumed) {
+		[super keyDown:event];
 	}
 }
 

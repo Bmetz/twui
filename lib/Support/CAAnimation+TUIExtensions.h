@@ -1,5 +1,5 @@
 /*
- Copyright 2011 Twitter, Inc.
+ Copyright 2012 Twitter, Inc.
  
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this work except in compliance with the License.
@@ -15,22 +15,15 @@
  */
 
 #import <Cocoa/Cocoa.h>
-#import "TUIKit.h"
 
-/*
- Notes:
- In your project, add NS_BUILD_32_LIKE_64 to your preprocessor flags
- */
+#import <QuartzCore/QuartzCore.h>
 
-int main(int argc, char *argv[])
-{
-	SInt32 major = 0;
-	SInt32 minor = 0;
-	Gestalt(gestaltSystemVersionMajor, &major);
-	Gestalt(gestaltSystemVersionMinor, &minor);
-	if((major == 10 && minor >= 7) || major >= 11) {
-		AtLeastLion = YES;
-	}
-	
-	return NSApplicationMain(argc, (const char **)argv);
-}
+typedef void (^TUICAAnimationCompletionBlock)();
+
+//Note this is slightly flawed as we set ourself as the delegate, really we should create a chained proxy, if we need that I will add it.
+
+@interface CAAnimation (TUIExtensions)
+
+@property (nonatomic, copy) TUICAAnimationCompletionBlock tui_completionBlock;
+
+@end

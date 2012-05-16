@@ -17,12 +17,12 @@
 #import "TUITableViewCell.h"
 #import "TUITableView.h"
 #import "TUITableView+Cell.h"
+#import "TUINSWindow.h"
 
 @implementation TUITableViewCell
 
 - (void)setReuseIdentifier:(NSString *)r
 {
-	[_reuseIdentifier release];
 	_reuseIdentifier = [r copy];
 }
 
@@ -35,11 +35,6 @@
 	return self;
 }
 
-- (void)dealloc
-{
-	[_reuseIdentifier release];
-	[super dealloc];
-}
 
 - (NSString *)reuseIdentifier
 {
@@ -82,21 +77,22 @@
 
 - (void)mouseDown:(NSEvent *)event
 {
-  // note the initial mouse location for dragging
-  _mouseOffset = [self localPointForLocationInWindow:[event locationInWindow]];
-  // notify our table view of the event
-  [self.tableView __mouseDownInCell:self offset:_mouseOffset event:event];
+	// note the initial mouse location for dragging
+	_mouseOffset = [self localPointForLocationInWindow:[event locationInWindow]];
+	// notify our table view of the event
+	[self.tableView __mouseDownInCell:self offset:_mouseOffset event:event];
   
-	TUITableView *tableView = self.tableView;
-	[tableView selectRowAtIndexPath:self.indexPath animated:tableView.animateSelectionChanges scrollPosition:TUITableViewScrollPositionNone];
 	[super mouseDown:event]; // may make the text renderer first responder, so we want to do the selection before this
 	
-	if(![tableView.delegate respondsToSelector:@selector(tableView:shouldSelectRowAtIndexPath:forEvent:)] || [tableView.delegate tableView:tableView shouldSelectRowAtIndexPath:self.indexPath forEvent:event]){
-		[tableView selectRowAtIndexPath:self.indexPath animated:tableView.animateSelectionChanges scrollPosition:TUITableViewScrollPositionNone];
+	if(![self.tableView.delegate respondsToSelector:@selector(tableView:shouldSelectRowAtIndexPath:forEvent:)] || [self.tableView.delegate tableView:self.tableView shouldSelectRowAtIndexPath:self.indexPath forEvent:event]){
+		[self.tableView selectRowAtIndexPath:self.indexPath animated:self.tableView.animateSelectionChanges scrollPosition:TUITableViewScrollPositionNone];
 		_tableViewCellFlags.highlighted = 1;
 		[self setNeedsDisplay];
 	}
 	
+	if([self acceptsFirstResponder]) {
+		[self.nsWindow makeFirstResponderIfNotAlreadyInResponderChain:self];
+	}
 }
 
 /**

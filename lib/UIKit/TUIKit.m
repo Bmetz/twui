@@ -16,7 +16,6 @@
 
 #import "TUIKit.h"
 
-CGFloat Screen_Scale = 1.0;
 BOOL AtLeastLion = NO;
 
 CGContextRef TUIGraphicsGetCurrentContext(void)
@@ -38,7 +37,11 @@ void TUIGraphicsPopContext(void)
 
 TUIImage* TUIGraphicsContextGetImage(CGContextRef ctx)
 {
-	return [TUIImage imageWithCGImage:TUICGImageFromBitmapContext(ctx)];
+	CGImageRef CGImage = TUICreateCGImageFromBitmapContext(ctx);
+	TUIImage *image = [TUIImage imageWithCGImage:CGImage];
+	CGImageRelease(CGImage);
+
+	return image;
 }
 
 void TUIGraphicsBeginImageContextWithOptions(CGSize size, BOOL opaque, CGFloat scale)
@@ -49,7 +52,7 @@ void TUIGraphicsBeginImageContextWithOptions(CGSize size, BOOL opaque, CGFloat s
 	if(size.height < 1) size.height = 1;
 	CGContextRef ctx = TUICreateGraphicsContextWithOptions(size, opaque);
 	TUIGraphicsPushContext(ctx);
-	// will release ctx on pop
+	CGContextRelease(ctx);
 }
 
 void TUIGraphicsBeginImageContext(CGSize size)
@@ -73,9 +76,7 @@ TUIImage* TUIGraphicsGetImageForView(TUIView *view)
 
 void TUIGraphicsEndImageContext(void)
 {
-	CGContextRef ctx = TUIGraphicsGetCurrentContext();
 	TUIGraphicsPopContext();
-	CGContextRelease(ctx);
 }
 
 TUIImage *TUIGraphicsDrawAsImage(CGSize size, void(^draw)(void))
@@ -90,7 +91,7 @@ TUIImage *TUIGraphicsDrawAsImage(CGSize size, void(^draw)(void))
 NSData* TUIGraphicsDrawAsPDF(CGRect *optionalMediaBox, void(^draw)(CGContextRef))
 {
 	NSMutableData *data = [NSMutableData data];
-	CGDataConsumerRef dataConsumer = CGDataConsumerCreateWithCFData((CFMutableDataRef)data);
+	CGDataConsumerRef dataConsumer = CGDataConsumerCreateWithCFData((__bridge CFMutableDataRef)data);
 	CGContextRef ctx = CGPDFContextCreate(dataConsumer, optionalMediaBox, NULL);
 	CGPDFContextBeginPage(ctx, NULL);
 	TUIGraphicsPushContext(ctx);

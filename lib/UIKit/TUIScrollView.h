@@ -77,7 +77,7 @@ typedef enum {
   CGSize          resizeKnobSize;
   TUIEdgeInsets   _contentInset;
 	
-	id _delegate;
+	__unsafe_unretained id _delegate;
 	
   TUIScrollKnob * _verticalScrollKnob;
   TUIScrollKnob * _horizontalScrollKnob;
@@ -154,7 +154,7 @@ typedef enum {
 @property (nonatomic) BOOL alwaysBounceHorizontal;
 @property (nonatomic) CGSize resizeKnobSize;
 @property (nonatomic) TUIEdgeInsets contentInset;
-@property (nonatomic, assign) id<TUIScrollViewDelegate> delegate;
+@property (nonatomic, unsafe_unretained) id<TUIScrollViewDelegate> delegate;
 @property (nonatomic, getter=isScrollEnabled) BOOL scrollEnabled;
 @property (nonatomic) TUIScrollViewIndicatorVisibility horizontalScrollIndicatorVisibility;
 @property (nonatomic) TUIScrollViewIndicatorVisibility verticalScrollIndicatorVisibility;
@@ -182,6 +182,7 @@ typedef enum {
 @property (nonatomic, readonly) CGPoint bounceOffset;
 
 @property (nonatomic, readonly, getter=isDragging) BOOL dragging;
+@property (nonatomic, readonly, getter=isDecelerating) BOOL decelerating;
 
 @end
 

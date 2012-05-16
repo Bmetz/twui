@@ -34,15 +34,17 @@
 	TUIFont *_font;
 	TUIColor *_textColor;
 	TUITextAlignment _alignment;
+	TUILineBreakMode _lineBreakMode;
 }
 
 @property(nonatomic,copy) NSString *text;
-@property(nonatomic,retain) NSAttributedString	*attributedString;
+@property(nonatomic,strong) NSAttributedString	*attributedString;
 
 @property(nonatomic,getter=isSelectable) BOOL selectable;
 @property(nonatomic, readonly) TUITextRenderer *renderer;
-@property(nonatomic,retain) TUIFont *font;
-@property(nonatomic,retain) TUIColor *textColor;
+@property(nonatomic,strong) TUIFont *font;
+@property(nonatomic,strong) TUIColor *textColor;
 @property(nonatomic,assign) TUITextAlignment alignment;
+@property(nonatomic, assign) TUILineBreakMode lineBreakMode; 
 
 @end

@@ -16,6 +16,7 @@
 
 #import "TUITextRenderer.h"
 #import "TUITextEditor.h"
+#import "TUIView.h"
 
 @interface NSString (ABTokenizerAdditions)
 @end
@@ -206,6 +207,62 @@
 	} else {
 		[self deleteBackward:nil];
 	}
+}
+
+- (void)moveToBeginningOfParagraph:(id)sender
+{
+	CFIndex cursor = MIN(_selectionStart, _selectionEnd);
+	__block CFIndex ret = -1;
+	[TEXT enumerateSubstringsInRange:NSMakeRange(0, [TEXT length]) options:NSStringEnumerationByParagraphs | NSStringEnumerationReverse | NSStringEnumerationSubstringNotRequired usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+		CFIndex l = substringRange.location;
+		if(l < cursor) {
+			ret = l;
+			*stop = YES;
+		}
+	}];
+	
+	if(ret == -1) {
+		ret = 0;
+	}
+	
+	_selectionStart = _selectionEnd = ret;
+		
+	[self.view setNeedsDisplay];
+}
+
+- (void)moveToEndOfParagraph:(id)sender
+{
+	CFIndex cursor = MAX(_selectionStart, _selectionEnd);
+	__block CFIndex ret = -1;
+	[TEXT enumerateSubstringsInRange:NSMakeRange(0, [TEXT length]) options:NSStringEnumerationByParagraphs | NSStringEnumerationSubstringNotRequired usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+		CFIndex l = substringRange.location + substringRange.length;
+		if(l > cursor) {
+			ret = l;
+			*stop = YES;
+		}
+	}];
+	
+	if(ret == -1) {
+		ret = [TEXT length];
+	}
+	
+	_selectionStart = _selectionEnd = ret;
+	
+	[self.view setNeedsDisplay];
+}
+
+- (void)moveToBeginningOfDocument:(id)sender
+{
+	_selectionStart = _selectionEnd = 0;
+	
+	[self.view setNeedsDisplay];
+}
+
+- (void)moveToEndOfDocument:(id)sender
+{
+	_selectionStart = _selectionEnd = [TEXT length];
+	
+	[self.view setNeedsDisplay];
 }
 
 @end

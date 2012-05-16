@@ -19,6 +19,7 @@
 
 typedef enum {
 	TUITableViewStylePlain,              // regular table view
+	TUITableViewStyleGrouped, // grouped table view—headers stick to the top of the table view and scroll with it
 } TUITableViewStyle;
 
 typedef enum {
@@ -66,7 +67,7 @@ typedef enum {
 @interface TUITableView : TUIScrollView
 {
 	TUITableViewStyle             _style;
-	id <TUITableViewDataSource>	  _dataSource; // weak
+	__unsafe_unretained id <TUITableViewDataSource>	_dataSource; // weak
 	NSArray                     * _sectionInfo;
 	
 	TUIView                     * _pullDownView;
@@ -109,8 +110,8 @@ typedef enum {
 
 - (id)initWithFrame:(CGRect)frame style:(TUITableViewStyle)style;                // must specify style at creation. -initWithFrame: calls this with UITableViewStylePlain
 
-@property (nonatomic,assign) id <TUITableViewDataSource>  dataSource;
-@property (nonatomic,assign) id <TUITableViewDelegate>    delegate;
+@property (nonatomic,unsafe_unretained) id <TUITableViewDataSource>  dataSource;
+@property (nonatomic,unsafe_unretained) id <TUITableViewDelegate>    delegate;
 
 @property (readwrite, assign) BOOL                        animateSelectionChanges;
 @property (nonatomic, assign) BOOL maintainContentOffsetAfterReload;
@@ -121,6 +122,9 @@ typedef enum {
  The table view itself has mechanisms for maintaining scroll position. During a live resize the table view should automatically "do the right thing".  This method may be useful during a reload if you want to stay in the same spot.  Use it instead of -reloadData.
  */
 - (void)reloadDataMaintainingVisibleIndexPath:(TUIFastIndexPath *)indexPath relativeOffset:(CGFloat)relativeOffset;
+
+// Forces a re-calculation and re-layout of the table. This is most useful for animating the relayout. It is potentially _more_ expensive than -reloadData since it has to allow for animating.
+- (void)reloadLayout;
 
 - (NSInteger)numberOfSections;
 - (NSInteger)numberOfRowsInSection:(NSInteger)section;
@@ -160,11 +164,11 @@ typedef enum {
 /**
  Above the top cell, only visible if you pull down (if you have scroll bouncing enabled)
  */
-@property (nonatomic, retain) TUIView *pullDownView;
+@property (nonatomic, strong) TUIView *pullDownView;
 
 - (BOOL)pullDownViewIsVisible;
 
-@property (nonatomic, retain) TUIView *headerView;
+@property (nonatomic, strong) TUIView *headerView;
 
 /**
  Used by the delegate to acquire an already allocated cell, in lieu of allocating a new one.

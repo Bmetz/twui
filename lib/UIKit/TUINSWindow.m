@@ -151,9 +151,9 @@ NSInteger makeFirstResponderCount = 0;
 			TUINSWindowFrame *contentView = [[TUINSWindowFrame alloc] initWithFrame:b];
 			contentView->w = self;
 			[self setContentView:contentView];
-			[contentView release];
 		} else {
 			[self setOpaque:YES];
+            [self setHasShadow:YES];
 		}
 
 		b.size.height -= ([self toolbarHeight]-22);
@@ -161,17 +161,10 @@ NSInteger makeFirstResponderCount = 0;
 		nsView = [[TUINSView alloc] initWithFrame:b];
 		[nsView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 		[[self contentView] addSubview:nsView];
-		[nsView release];
 		
 		altUINSViews = [[NSMutableArray alloc] init];
 	}
 	return self;
-}
-
-- (void)dealloc
-{
-	[altUINSViews release];
-	[super dealloc];
 }
 
 - (void)drawBackground:(CGRect)rect
@@ -194,6 +187,11 @@ NSInteger makeFirstResponderCount = 0;
 	[super resignKeyWindow];
 	[nsView endHyperFocus:YES];
 	[self setEverythingNeedsDisplay];
+}
+
+- (BOOL)canBecomeKeyWindow
+{
+	return YES;
 }
 
 @end

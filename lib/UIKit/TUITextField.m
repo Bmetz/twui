@@ -30,11 +30,6 @@
 	return [TUITextFieldEditor class];
 }
 
-- (void)dealloc
-{
-	[rightButton release];
-	[super dealloc];
-}
 
 - (void)setDelegate:(id <TUITextViewDelegate>)d
 {
@@ -59,9 +54,7 @@
 {
 	if(rightButton != b) {
 		[rightButton removeFromSuperview];
-		[rightButton release];
 		rightButton = b;
-		[rightButton retain];
 		rightButton.layout = ^CGRect(TUIView *v) {
 			CGRect b = v.superview.bounds;
 			return CGRectMake(b.size.width - b.size.height, 0, b.size.height, b.size.height);
@@ -100,11 +93,6 @@ doClear:
 }
 
 - (void)insertTab:(id)sender
-{
-	[[self _textField] _tabToNext];
-}
-
-- (void)moveDown:(id)sender
 {
 	[[self _textField] _tabToNext];
 }
